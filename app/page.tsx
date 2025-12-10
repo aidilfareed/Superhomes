@@ -1,13 +1,42 @@
+'use client'
+
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import SearchBar from '@/components/SearchBar'
 import PropertyCard from '@/components/PropertyCard'
-import { getFeaturedProperties, getRecentProperties } from '@/lib/mockData'
+import { getFeaturedProperties } from '@/lib/database'
+import { Property } from '@/lib/supabase'
+// Fallback to mock data if database is empty
+import { mockProperties } from '@/lib/mockData'
 
 export default function HomePage() {
-    const featuredProperties = getFeaturedProperties()
-    const recentProperties = getRecentProperties()
+    const [properties, setProperties] = useState<Property[]>([])
+    const [loading, setLoading] = useState(true)
+
+    useEffect(() => {
+        async function loadProperties() {
+            try {
+                const dbProperties = await getFeaturedProperties()
+                // Use database properties if available, otherwise use mock data
+                if (dbProperties.length > 0) {
+                    setProperties(dbProperties)
+                } else {
+                    setProperties(mockProperties.slice(0, 6))
+                }
+            } catch (error) {
+                console.error('Error loading properties:', error)
+                setProperties(mockProperties.slice(0, 6))
+            } finally {
+                setLoading(false)
+            }
+        }
+        loadProperties()
+    }, [])
+
+    const featuredProperties = properties.slice(0, 3)
+    const recentProperties = properties.slice(0, 6)
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 to-primary-50/20">
@@ -106,11 +135,19 @@ export default function HomePage() {
                         </Link>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                        {featuredProperties.map((property) => (
-                            <PropertyCard key={property.id} property={property} />
-                        ))}
-                    </div>
+                    {loading ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                            {[1, 2, 3].map((i) => (
+                                <div key={i} className="glass rounded-2xl h-96 animate-pulse bg-gray-200"></div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                            {featuredProperties.map((property) => (
+                                <PropertyCard key={property.id} property={property} />
+                            ))}
+                        </div>
+                    )}
 
                     <div className="text-center mt-8 md:hidden">
                         <Link href="/properties" className="btn-primary">
@@ -128,11 +165,19 @@ export default function HomePage() {
                         <p className="text-gray-600">Fresh properties added to our marketplace</p>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                        {recentProperties.map((property) => (
-                            <PropertyCard key={property.id} property={property} />
-                        ))}
-                    </div>
+                    {loading ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                            {[1, 2, 3, 4, 5, 6].map((i) => (
+                                <div key={i} className="glass rounded-2xl h-96 animate-pulse bg-gray-200"></div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                            {recentProperties.map((property) => (
+                                <PropertyCard key={property.id} property={property} />
+                            ))}
+                        </div>
+                    )}
                 </div>
             </section>
 

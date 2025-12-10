@@ -1,12 +1,16 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import PropertyCard from '@/components/PropertyCard'
+import { getProperties } from '@/lib/database'
+import { Property } from '@/lib/supabase'
 import { mockProperties } from '@/lib/mockData'
 
 export default function PropertiesPage() {
+    const [allProperties, setAllProperties] = useState<Property[]>([])
+    const [loading, setLoading] = useState(true)
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
     const [sortBy, setSortBy] = useState('newest')
     const [filters, setFilters] = useState({
@@ -17,8 +21,27 @@ export default function PropertiesPage() {
         location: '',
     })
 
-    // Filter and sort properties
-    let filteredProperties = [...mockProperties]
+    useEffect(() => {
+        async function loadProperties() {
+            try {
+                const dbProperties = await getProperties()
+                if (dbProperties.length > 0) {
+                    setAllProperties(dbProperties)
+                } else {
+                    setAllProperties(mockProperties)
+                }
+            } catch (error) {
+                console.error('Error loading properties:', error)
+                setAllProperties(mockProperties)
+            } finally {
+                setLoading(false)
+            }
+        }
+        loadProperties()
+    }, [])
+
+    // Filter properties
+    let filteredProperties = [...allProperties]
 
     if (filters.propertyType) {
         filteredProperties = filteredProperties.filter(p => p.property_type === filters.propertyType)
@@ -59,7 +82,9 @@ export default function PropertiesPage() {
                 {/* Header */}
                 <div className="mb-8">
                     <h1 className="font-heading font-bold text-4xl text-gray-900 mb-2">Browse Properties</h1>
-                    <p className="text-gray-600">Showing {filteredProperties.length} properties</p>
+                    <p className="text-gray-600">
+                        {loading ? 'Loading...' : `Showing ${filteredProperties.length} properties`}
+                    </p>
                 </div>
 
                 <div className="flex flex-col lg:flex-row gap-8">
@@ -184,7 +209,13 @@ export default function PropertiesPage() {
                         </div>
 
                         {/* Properties Grid/List */}
-                        {filteredProperties.length > 0 ? (
+                        {loading ? (
+                            <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 gap-6' : 'flex flex-col gap-6'}>
+                                {[1, 2, 3, 4, 5, 6].map((i) => (
+                                    <div key={i} className="glass rounded-2xl h-80 animate-pulse bg-gray-200"></div>
+                                ))}
+                            </div>
+                        ) : filteredProperties.length > 0 ? (
                             <div className={viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 gap-6' : 'flex flex-col gap-6'}>
                                 {filteredProperties.map((property) => (
                                     <PropertyCard key={property.id} property={property} />

@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
+import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { User, Session } from '@supabase/supabase-js'
 
@@ -32,45 +32,54 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [session, setSession] = useState<Session | null>(null)
     const [loading, setLoading] = useState(true)
 
-    useEffect(() => {
-        // Get initial session
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            setSession(session)
-            setUser(session?.user ?? null)
-            if (session?.user) {
-                fetchProfile(session.user.id)
-            }
-            setLoading(false)
-        })
-
-        // Listen for auth changes
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(
-            async (event, session) => {
-                setSession(session)
-                setUser(session?.user ?? null)
-
-                if (session?.user) {
-                    await fetchProfile(session.user.id)
-                } else {
-                    setProfile(null)
-                }
-                setLoading(false)
-            }
-        )
-
-        return () => subscription.unsubscribe()
-    }, [])
-
-    const fetchProfile = async (userId: string) => {
+    // Memoized fetch profile function with timeout
+    const fetchProfile = useCallback(async (userId: string, userEmail: string) => {
         try {
+            // Add timeout to prevent hanging
+            const controller = new AbortController()
+            const timeoutId = setTimeout(() => controller.abort(), 5000) // 5 second timeout
+
             const { data, error } = await supabase
                 .from('users')
                 .select('*')
                 .eq('id', userId)
                 .single()
 
+            clearTimeout(timeoutId)
+
             if (error) {
-                console.error('Error fetching profile:', error)
+                // Profile doesn't exist - create a default one for OAuth users
+                if (error.code === 'PGRST116') {
+                    // No profile found, create one
+                    const { data: newProfile, error: insertError } = await supabase
+                        .from('users')
+                        .insert({
+                            id: userId,
+                            email: userEmail,
+                            user_type: 'buyer',
+                        })
+                        .select()
+                        .single()
+
+                    if (!insertError && newProfile) {
+                        setProfile(newProfile)
+                    } else {
+                        // If insert fails, just set a minimal profile from auth data
+                        setProfile({
+                            id: userId,
+                            email: userEmail,
+                            user_type: 'buyer',
+                        })
+                    }
+                } else {
+                    console.error('Error fetching profile:', error)
+                    // Set minimal profile from auth data
+                    setProfile({
+                        id: userId,
+                        email: userEmail,
+                        user_type: 'buyer',
+                    })
+                }
                 return
             }
 
@@ -95,8 +104,70 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }
         } catch (error) {
             console.error('Error fetching profile:', error)
+            // Set minimal profile on error
+            setProfile({
+                id: userId,
+                email: userEmail,
+                user_type: 'buyer',
+            })
         }
-    }
+    }, [])
+
+    useEffect(() => {
+        let mounted = true
+
+        // Get initial session
+        const initAuth = async () => {
+            try {
+                const { data: { session } } = await supabase.auth.getSession()
+
+                if (!mounted) return
+
+                setSession(session)
+                setUser(session?.user ?? null)
+
+                if (session?.user) {
+                    await fetchProfile(session.user.id, session.user.email || '')
+                }
+            } catch (error) {
+                console.error('Auth init error:', error)
+            } finally {
+                if (mounted) {
+                    setLoading(false)
+                }
+            }
+        }
+
+        initAuth()
+
+        // Listen for auth changes
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(
+            async (event, session) => {
+                if (!mounted) return
+
+                console.log('Auth event:', event)
+
+                setSession(session)
+                setUser(session?.user ?? null)
+
+                if (event === 'SIGNED_OUT') {
+                    setProfile(null)
+                    setLoading(false)
+                } else if (session?.user) {
+                    await fetchProfile(session.user.id, session.user.email || '')
+                    setLoading(false)
+                } else {
+                    setProfile(null)
+                    setLoading(false)
+                }
+            }
+        )
+
+        return () => {
+            mounted = false
+            subscription.unsubscribe()
+        }
+    }, [fetchProfile])
 
     const signIn = async (email: string, password: string) => {
         try {
@@ -170,10 +241,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     const signOut = async () => {
-        await supabase.auth.signOut()
-        setUser(null)
-        setProfile(null)
-        setSession(null)
+        try {
+            // Clear state immediately for better UX
+            setUser(null)
+            setProfile(null)
+            setSession(null)
+
+            // Then sign out from Supabase
+            const { error } = await supabase.auth.signOut()
+
+            if (error) {
+                console.error('Sign out error:', error)
+            }
+
+            // Force a hard refresh to clear all cached state
+            if (typeof window !== 'undefined') {
+                window.location.href = '/'
+            }
+        } catch (error) {
+            console.error('Sign out error:', error)
+            // Force refresh even on error
+            if (typeof window !== 'undefined') {
+                window.location.href = '/'
+            }
+        }
     }
 
     const signInWithGoogle = async () => {

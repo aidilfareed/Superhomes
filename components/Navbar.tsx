@@ -3,23 +3,17 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 
 export default function Navbar() {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
     const [userMenuOpen, setUserMenuOpen] = useState(false)
     const { user, profile, loading, signOut } = useAuth()
-    const router = useRouter()
 
     const handleSignOut = async () => {
-        await signOut()
         setUserMenuOpen(false)
-        router.push('/')
-        router.refresh()
+        await signOut()
     }
-
-
     return (
         <nav className="glass sticky top-0 z-50">
             <div className="container-custom">

@@ -187,7 +187,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         userData: { name: string; userType: 'buyer' | 'agent'; phone?: string }
     ) => {
         try {
-            // 1. Create auth user
+            // 1. Create auth user (trigger will auto-create profile in users table)
             const { data: authData, error: authError } = await supabase.auth.signUp({
                 email,
                 password,
@@ -202,34 +202,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             if (authError) return { error: authError }
 
             if (authData.user) {
-                // 2. Create user profile
-                const { error: profileError } = await supabase
-                    .from('users')
-                    .insert({
-                        id: authData.user.id,
-                        email: email,
-                        user_type: userData.userType,
-                    })
+                // 2. Update user_type if agent (trigger creates as 'buyer' by default)
+                if (userData.userType === 'agent') {
+                    // Wait a moment for the trigger to complete
+                    await new Promise(resolve => setTimeout(resolve, 500))
 
-                if (profileError) {
-                    console.error('Profile creation error:', profileError)
-                    return { error: profileError }
-                }
+                    const { error: updateError } = await supabase
+                        .from('users')
+                        .update({ user_type: 'agent' })
+                        .eq('id', authData.user.id)
 
-                // 3. If agent, create agent profile
-                if (userData.userType === 'agent' && userData.phone) {
-                    const { error: agentError } = await supabase
-                        .from('agents')
-                        .insert({
-                            user_id: authData.user.id,
-                            name: userData.name,
-                            phone: userData.phone,
-                            whatsapp: userData.phone,
-                        })
+                    if (updateError) {
+                        console.error('User type update error:', updateError)
+                        // Don't fail registration, just log the error
+                    }
 
-                    if (agentError) {
-                        console.error('Agent creation error:', agentError)
-                        return { error: agentError }
+                    // 3. Create agent profile
+                    if (userData.phone) {
+                        const { error: agentError } = await supabase
+                            .from('agents')
+                            .insert({
+                                user_id: authData.user.id,
+                                name: userData.name,
+                                phone: userData.phone,
+                                whatsapp: userData.phone,
+                            })
+
+                        if (agentError) {
+                            console.error('Agent creation error:', agentError)
+                            // Don't fail registration for agent profile error
+                        }
                     }
                 }
             }

@@ -12,17 +12,23 @@ export interface Property {
     description: string
     price: number
     location: string
-    property_type: 'Condo' | 'Landed' | 'Commercial' | 'Apartment'
+    property_type: string // Changed to string for flexibility with scraped data
     bedrooms: number
     bathrooms: number
     built_up_size: number
-    tenure: 'Freehold' | 'Leasehold' | '99 years'
-    furnishing: 'Fully Furnished' | 'Partially Furnished' | 'Unfurnished'
+    tenure: string // Changed to string for flexibility
+    furnishing: string | null // Can be null now
     images: string[]
     status: 'active' | 'draft'
     agent_id: string
     created_at: string
     updated_at: string
+    // New columns from Mudah.my scraping
+    listing_id?: string
+    original_url?: string
+    city?: string
+    state?: string
+    land_size?: number
 }
 
 export interface Agent {

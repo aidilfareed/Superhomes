@@ -51,15 +51,26 @@ export default function PropertyCard({ property }: PropertyCardProps) {
             <div className="property-card group">
                 {/* Image */}
                 <div className="relative h-64 bg-gradient-to-br from-primary-100 to-accent-100 overflow-hidden">
-                    {/* Placeholder for property image */}
-                    <div className="absolute inset-0 flex items-center justify-center">
-                        <svg className="w-20 h-20 text-primary-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                        </svg>
-                    </div>
+                    {/* Property Image or Placeholder */}
+                    {property.images && property.images.length > 0 ? (
+                        <img
+                            src={property.images[0]}
+                            alt={property.title}
+                            className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                            onError={(e) => {
+                                e.currentTarget.style.display = 'none';
+                            }}
+                        />
+                    ) : (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                            <svg className="w-20 h-20 text-primary-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                            </svg>
+                        </div>
+                    )}
 
                     {/* Property Type Badge */}
-                    <div className="absolute top-4 left-4">
+                    <div className="absolute top-4 left-4 z-10">
                         <span className="glass px-3 py-1 rounded-full text-sm font-semibold text-primary-600">
                             {property.property_type}
                         </span>
@@ -70,8 +81,8 @@ export default function PropertyCard({ property }: PropertyCardProps) {
                         onClick={handleFavoriteClick}
                         disabled={isToggling}
                         className={`absolute top-4 right-4 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 ${favorited
-                                ? 'bg-red-500 text-white shadow-lg scale-110'
-                                : 'glass text-gray-600 hover:bg-red-50 hover:text-red-500'
+                            ? 'bg-red-500 text-white shadow-lg scale-110'
+                            : 'glass text-gray-600 hover:bg-red-50 hover:text-red-500'
                             } ${isToggling ? 'opacity-50 cursor-wait' : 'hover:scale-110'}`}
                         aria-label={favorited ? 'Remove from favorites' : 'Add to favorites'}
                     >

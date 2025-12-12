@@ -143,9 +143,21 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
                     <div className="lg:col-span-2">
                         {/* Image Gallery */}
                         <div className="bg-gradient-to-br from-primary-100 to-accent-100 rounded-2xl h-96 mb-6 flex items-center justify-center relative overflow-hidden">
-                            <svg className="w-32 h-32 text-primary-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                            </svg>
+                            {property.images && property.images.length > 0 ? (
+                                <img
+                                    src={property.images[0]}
+                                    alt={property.title}
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => {
+                                        // Hide image on error and show placeholder
+                                        e.currentTarget.style.display = 'none';
+                                    }}
+                                />
+                            ) : (
+                                <svg className="w-32 h-32 text-primary-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                                </svg>
+                            )}
                             <div className="absolute bottom-4 right-4">
                                 <span className="text-white text-sm font-semibold bg-black/30 px-3 py-1 rounded">
                                     SuperHomes
@@ -200,7 +212,7 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
                             {/* Description */}
                             <div className="mb-6">
                                 <h2 className="font-heading font-bold text-xl mb-3">Description</h2>
-                                <p className="text-gray-700 leading-relaxed">{property.description}</p>
+                                <div className="text-gray-700 leading-relaxed whitespace-pre-wrap break-words">{property.description}</div>
                             </div>
 
                             {/* Specifications */}
@@ -211,18 +223,34 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
                                         <span className="text-gray-600">Property Type</span>
                                         <span className="font-semibold text-gray-900">{property.property_type}</span>
                                     </div>
-                                    <div className="flex justify-between py-2 border-b border-gray-200">
-                                        <span className="text-gray-600">Furnishing</span>
-                                        <span className="font-semibold text-gray-900">{property.furnishing}</span>
-                                    </div>
-                                    <div className="flex justify-between py-2 border-b border-gray-200">
-                                        <span className="text-gray-600">Built-up Size</span>
-                                        <span className="font-semibold text-gray-900">{property.built_up_size} sqft</span>
-                                    </div>
+                                    {property.furnishing && (
+                                        <div className="flex justify-between py-2 border-b border-gray-200">
+                                            <span className="text-gray-600">Furnishing</span>
+                                            <span className="font-semibold text-gray-900">{property.furnishing}</span>
+                                        </div>
+                                    )}
+                                    {property.built_up_size > 0 && (
+                                        <div className="flex justify-between py-2 border-b border-gray-200">
+                                            <span className="text-gray-600">Built-up Size</span>
+                                            <span className="font-semibold text-gray-900">{property.built_up_size.toLocaleString()} sqft</span>
+                                        </div>
+                                    )}
+                                    {property.land_size && property.land_size > 0 && (
+                                        <div className="flex justify-between py-2 border-b border-gray-200">
+                                            <span className="text-gray-600">Land Size</span>
+                                            <span className="font-semibold text-gray-900">{property.land_size} acres</span>
+                                        </div>
+                                    )}
                                     <div className="flex justify-between py-2 border-b border-gray-200">
                                         <span className="text-gray-600">Tenure</span>
                                         <span className="font-semibold text-gray-900">{property.tenure}</span>
                                     </div>
+                                    {property.city && property.state && (
+                                        <div className="flex justify-between py-2 border-b border-gray-200">
+                                            <span className="text-gray-600">Location</span>
+                                            <span className="font-semibold text-gray-900">{property.city}, {property.state}</span>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>
